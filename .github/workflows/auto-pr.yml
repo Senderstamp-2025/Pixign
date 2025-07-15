@@ -1,0 +1,128 @@
+name: Auto PR
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, closed]
+    branches:
+      - release
+      - develop
+      - main
+
+jobs:
+  pr_automation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      # 1. Assignees에 자기 자신 자동 설정 (PR 생성자)
+      - name: Auto-assign issue creator to PR
+        if: github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'ready_for_review'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const prCreator = context.actor;
+            console.log(`Assigning ${prCreator} to PR #${prNumber}`);
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              assignees: [prCreator]
+            });
+
+      # 2. Reviewers에 특정 팀원 자동 설정
+      - name: Request reviews from specific team members
+        if: github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'ready_for_review'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const reviewers = ['Da-Yeon-Kim', '202780'];
+            console.log(`Requesting reviews from ${reviewers.join(', ')} for PR #${prNumber}`);
+            try {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                reviewers: reviewers
+              });
+            } catch (error) {
+              console.error(`Failed to request reviewers: ${error.message}`);
+            }
+
+      # 3. 제목에 따라 Labels 자동 설정
+      - name: Auto-label based on PR title
+        if: github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'ready_for_review'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const prTitle = context.payload.pull_request.title;
+            const labelsToAdd = [];
+
+            if (prTitle.startsWith('[FEAT]')) {
+              labelsToAdd.push('✨ Feature');
+            } else if (prTitle.startsWith('[FIX]')) {
+              labelsToAdd.push('🐞 BugFix');
+            } else if (prTitle.startsWith('[DOCS]')) {
+              labelsToAdd.push('📃 Docs');
+            } else if (prTitle.includes('[REFACTOR]')) {
+              labelsToAdd.push('🔨 Refactor');
+            } else if (prTitle.includes('[TEST]')) {
+              labelsToAdd.push('✅ Test');
+            } else if (prTitle.includes('[CHORE]')) {
+              labelsToAdd.push('⚙️ Setting);
+            }
+
+            if (labelsToAdd.length > 0) {
+              console.log(`Adding labels: ${labelsToAdd.join(', ')} to PR #${prNumber}`);
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  labels: labelsToAdd
+                });
+              } catch (error) {
+                console.error(`Failed to add labels: ${error.message}`);
+              }
+            } else {
+              console.log('No matching title pattern found for labels.');
+            }
+
+      # 4. close #이슈번호 로 이슈 자동 닫기 (develop 브랜치 병합 시)
+      - name: Close linked issue on PR merge
+        if: github.event.pull_request.merged == true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prBody = context.payload.pull_request.body;
+            const prTitle = context.payload.pull_request.title;
+            const regex = /(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+#(\d+)/i;
+
+            let issueNumber = null;
+
+            let match = prBody.match(regex);
+            if (match && match[1]) {
+              issueNumber = match[1];
+            }
+
+            if (issueNumber) {
+              console.log(`Found issue number: ${issueNumber}. Attempting to close it.`);
+              try {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  state: 'closed'
+                });
+                console.log(`Successfully closed issue #${issueNumber}`);
+              } catch (error) {
+                console.error(`Failed to close issue #${issueNumber}:`, error.message);
+              }
+            } else {
+              console.log('No closing keyword found in PR body or title. Issue will not be closed automatically.');
+            }
