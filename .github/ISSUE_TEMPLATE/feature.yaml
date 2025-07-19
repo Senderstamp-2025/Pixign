@@ -1,0 +1,53 @@
+name: "\u2728 Feature 요청"
+description: "기능 추가 작업 이슈"
+title: "[FEAT] "
+labels: ["✨ Feature"]
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: 기능 요약
+      description: 간단히 어떤 기능인지 적어주세요.
+    validations:
+      required: true
+
+  - type: textarea
+    id: detail
+    attributes:
+      label: 상세 설명
+      description: 기능이 어떤 상황에서, 어떤 이유로 필요한지 상세히 설명해주세요.
+      placeholder: |
+        예) 사용자 관리 화면에서 엑셀 다운로드 기능 추가 필요.
+
+  - type: checkboxes
+    id: todo
+    attributes:
+      label: ✅ To-Do
+      description: 해야 할 작업 항목을 작성하고 완료 시 체크하세요.
+      options:
+        - label: 항목 1
+        - label: 항목 2
+        - label: 항목 3
+
+  - type: textarea
+    id: reference
+    attributes:
+      label: 참고 자료
+      description: 관련 문서, 가이드라인, 링크가 있다면 공유해주세요.
+
+  - type: input
+    id: assignee
+    attributes:
+      label: 👥 담당자
+      description: 이 이슈의 담당자를 지정하세요.
+      placeholder: 예) @username
+
+  - type: checkboxes
+    id: priority
+    attributes:
+      label: ⬆️ 우선순위
+      description: 이 이슈의 우선순위를 선택하세요.
+      options:
+        - label: 🔥 High
+        - label: ⚡ Medium
+        - label: 💤 Low
