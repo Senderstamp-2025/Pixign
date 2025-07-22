@@ -1,0 +1,9 @@
+version: "3"
+
+services:
+  image-server:
+    build: ./image-server
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./image-server:/app
